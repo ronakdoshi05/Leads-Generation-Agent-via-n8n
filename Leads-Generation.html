@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quick Feedback — Form</title>
+  <style>
+    :root{
+      --bg1: #f6f8fb;
+      --card: #ffffff;
+      --accent: #4f46e5;
+      --muted: #6b7280;
+      --radius: 12px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size:16px;
+    }
+    html,body{height:100%;margin:0}
+    body{
+      display:flex;align-items:center;justify-content:center;
+      background: linear-gradient(135deg,#eef2ff 0%, #f8fafc 60%);
+      padding:24px;
+      color:#0f172a;
+    }
+    .card{
+      width:100%;max-width:720px;background:var(--card);border-radius:var(--radius);
+      box-shadow: 0 8px 30px rgba(2,6,23,0.08);padding:28px;box-sizing:border-box;
+    }
+    h1{margin:0 0 8px;font-size:22px}
+    p.lead{margin:0 0 18px;color:var(--muted)}
+    form{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+    .full{grid-column:1/-1}
+    label{display:block;font-weight:600;margin-bottom:6px}
+    .required-star{color:#e11d48;margin-left:6px}
+    input[type="text"],input[type="email"],select,textarea{
+      width:100%;padding:12px;border-radius:8px;border:1px solid #e6edf3;box-sizing:border-box;
+      font-size:15px;outline:none
+    }
+    input:focus,select:focus,textarea:focus{box-shadow:0 0 0 4px rgba(79,70,229,0.08);border-color:var(--accent)}
+    textarea{min-height:110px;resize:vertical}
+    .actions{grid-column:1/-1;display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:4px}
+    button{background:var(--accent);color:white;padding:10px 16px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+    button[disabled]{opacity:0.6;cursor:default}
+    .note{font-size:13px;color:var(--muted);margin-top:8px}
+    .success{background:#ecfdf5;border:1px solid #bbf7d0;color:#065f46;padding:10px;border-radius:8px}
+    .hidden{display:none}
+    @media (max-width:720px){
+      form{grid-template-columns:1fr}
+      .actions{justify-content:stretch}
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <h1>Quick Feedback</h1>
+    <p class="lead">Please fill all fields below — your feedback helps us improve.</p>
+
+    <form id="feedbackForm" class="nice-form" method="POST"
+          action="https://f2492978217a.ngrok-free.app/webhook/61924e08-0c76-4f91-8516-40908be3631c"
+          novalidate>
+      <div class="full">
+        <label for="fullName">Full Name <span class="required-star" aria-hidden="true">*</span></label>
+        <input id="fullName" name="fullName" type="text" placeholder="e.g. John Doe" required aria-required="true" aria-describedby="fullNameHelp">
+        <div id="fullNameHelp" class="note">Please enter your full name.</div>
+      </div>
+
+      <div>
+        <label for="email">Email ID <span class="required-star" aria-hidden="true">*</span></label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required aria-required="true" aria-describedby="emailHelp">
+        <div id="emailHelp" class="note">We will only use this to follow up about your submission.</div>
+      </div>
+
+      <div>
+        <label for="mood">How are you? <span class="required-star" aria-hidden="true">*</span></label>
+        <select id="mood" name="mood" required aria-required="true" aria-describedby="moodHelp">
+          <option value="">-- pick one --</option>
+          <option>Good</option>
+          <option>Better</option>
+          <option>Best</option>
+        </select>
+        <div id="moodHelp" class="note">Choose how you're feeling right now.</div>
+      </div>
+
+      <div class="full">
+        <label for="found">Where did you find this? <span class="required-star" aria-hidden="true">*</span></label>
+        <input id="found" name="found" type="text" required aria-required="true" aria-describedby="foundHelp" placeholder="Let us know">
+        <div id="foundHelp" class="note">Tell us where you discovered this form.</div>
+      </div>
+
+      <div class="actions">
+        <button id="submitBtn" type="submit">Send Feedback</button>
+      </div>
+
+      <div id="responseMessage" class="full hidden" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+
+  <script>
+    (function(){
+      const form = document.getElementById('feedbackForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const responseMessage = document.getElementById('responseMessage');
+
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        if(!form.checkValidity()){
+          form.reportValidity();
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+        responseMessage.classList.add('hidden');
+
+        const formData = new FormData(form);
+        const payload = {};
+        for(const [k,v] of formData.entries()){
+          payload[k] = v;
+        }
+
+        try {
+          const res = await fetch(form.action, {
+            method: form.method || 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload),
+            credentials: 'omit'
+          });
+
+          if(res.ok){
+            responseMessage.className = 'full success';
+            responseMessage.textContent = 'Thanks — your response has been received.';
+            responseMessage.classList.remove('hidden');
+            form.reset();
+          } else {
+            const text = await res.text().catch(() => res.statusText || 'Error');
+            responseMessage.className = 'full';
+            responseMessage.textContent = 'Submission failed: ' + text;
+            responseMessage.classList.remove('hidden');
+          }
+        } catch(err) {
+          responseMessage.className = 'full';
+          responseMessage.textContent = 'Network error: ' + (err.message||err);
+          responseMessage.classList.remove('hidden');
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Feedback';
+      });
+    })();
+  </script>
+</body>
+</html>
